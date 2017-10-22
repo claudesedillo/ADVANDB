@@ -2,20 +2,23 @@ package model;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
 
 public class Database {
 
 	private Connection connection;
-	private String url = "jdbc:mysql://localhost:3306/library?useSSL = true";
+	private String url = "jdbc:mysql://localhost:3306/advandbmc01?useSSL = true";
 	private final String username = "root";
 	private final String password = "1234";
+	
+	public Database(){
+		Connect();
+	}
 	
 	public void Connect(){
 		try{
 			connection = DriverManager.getConnection(url, username, password);
+			if(connection != null)
+			System.out.println("Connected to " + url + " with " + username);
 		}
 		catch(Exception e){
 			e.printStackTrace();
@@ -30,16 +33,4 @@ public class Database {
 		this.connection = connection;
 	}
 	
-	public ResultSet executeQuery(){
-		Statement statement;
-		try {
-			statement = connection.createStatement();
-			ResultSet rs = statement.executeQuery("SELECT * FROM book");
-			return rs;
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return null;
-	}
 }

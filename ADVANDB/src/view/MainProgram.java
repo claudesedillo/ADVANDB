@@ -2,149 +2,282 @@ package view;
 
 import java.awt.Color;
 import java.awt.Cursor;
+import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Image;
+import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Vector;
 
 import javax.swing.DefaultComboBoxModel;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.SwingConstants;
 import javax.swing.table.DefaultTableModel;
 
+import model.Database;
+
 public class MainProgram extends JPanel{
 
-	private Image backgroundImage = new ImageIcon(this.getClass().getResource("/welcomeScreenImage.png")).getImage();
-	private JLabel backgroundImageLabel;
-	private JTable resultTable;
-	private DefaultTableModel model;
-	private JComboBox<String> numberOfTables, queryVariant, queryVersion;
-	private DefaultComboBoxModel<String> queryVariantList, queryVersionList;
-	private JLabel lblSelectQueryVariant;
-	private JLabel lblNumOfTables;
-	private JLabel lblSelectQueryVersion;
-	private JLabel txtSelectFrom;
-	private ItemListener numberOfTablesListener;
+	private Database database;
+	private JTable resultTable, timeTable;
+	private DefaultTableModel timeTableModel;
+	private JComboBox<String> queryComboBox, queryBox;
+	private ItemListener queryVariantListener, queryListener;
 	private JButton query;
-	private String[] oneTableVariants = {"1.1 - Select all books", "1.2 -Select all publishers"};
-	private String[] twoTableVariants = {"2.1 - Select all books and their publishers", "2.2 - Select number of unique books in each branch"};
-	private String[] threeTableVariants = {"3.1 - Select all books that were never borrowed in each branch"};
-	private String[] fourTableVariants = {"4.1 - Select most popular book for each branch", "4.2 - Select least popular book for each branch"};
-	private String[] oneTable1stVariantQuery = {"SELECT * FROM books, SELECT * FROM books"};
-	private String[] oneTable2ndVariantQuery = {"SELECT * FROM publishers, SELECT * FROM publishers"};
-	private String[] twoTable1stVariantQuery = {};
-	private String[] twoTable2ndVariantQuery = {};
-	private String[] threeTable1stVariantQuery = {};
-	private String[] threeTable2ndVariantQuery = {};
-	private String[] fourTable1stVariantQuery = {};
-	private String[] fourTable2ndVariantQuery = {};
+	private DefaultComboBoxModel<String> queryVariantListModel, queryListModel;
+	private String[] queryVariants = {"Select all books with a similar name",
+								  "Select all publishers with a similar name",
+								  "Select book copies of a certain book", 
+								  "Select all book loans",
+								  "SELECT all authors with a similar name",
+								  "SELECT all publishers with a similar name",
+								  "SELECT the most popular books in all branches",
+								  "SELECT the least popular books in all branches"};
+	private String[] firstQueryVersions = {"<html> select * from publisher <br>" +
+										   "where address = \"tokyo\" <br>" +
+										   "or address = \"osaka\" <br></html>", 
+										   "<html> select * from publisher <br> where address = \"toronto\" </html>"};
+	private String[] secondQueryVersions = {"second query version 1", "second query version 2"};
+	private String[] thirdQueryVersions = {"third query version 1", "third query version 2"};
+	private String[] fourthQueryVersions = {"fourth query version 1", "fourth query version 2"};
+	private String[] fifthQueryVersions = {"fifth query version 1", "fifth query version 2"};
+	private String[] sixthQueryVersions = {"sixth query version 1", "sixth query version 2"};
+	private String[] seventhQueryVersions = {"seventh query version 1", "seventh query version 2"};
+	private String[] eighthQueryVersions = {"eighth query version 1", "eighth query version 2"};
+	private JScrollPane timeTableScrollPane, resultTableScrollPane;
+	private JScrollPane queryScrollPane;
+	private JLabel queryTextLabel;
 	
 	public MainProgram(){
 		init();
 	}
 	
 	public void init(){
+		database = new Database();
 		setBackground(Color.LIGHT_GRAY);
 		setLayout(null);
-		
+		setSize(new Dimension(950, 650));
 		query = new JButton("Query");
-		query.setBounds(44, 395, 143, 33);
+		query.addActionListener(new queryAL());
+		query.setBounds(530, 54, 110, 20);
 		query.setForeground(Color.WHITE);
-		query.setFont(new Font("Trebuchet MS", Font.PLAIN, 20));
+		query.setFont(new Font("Trebuchet MS", Font.PLAIN, 15));
 		query.setBackground(new Color(40,40,92));
 		query.setOpaque(true);
 		query.setBorderPainted(false);
 		query.setCursor(new Cursor(Cursor.HAND_CURSOR));
 		add(query);
 		
+		resultTableScrollPane = new JScrollPane();
+		resultTableScrollPane.setBounds(10, 85, 650, 300);
+		add(resultTableScrollPane);
 		resultTable = new JTable();
-		resultTable.setBounds(247, 105, 393, 350);
-		model = new DefaultTableModel(3, 3);
-		resultTable.setModel(model);
-		add(resultTable);
+		resultTableScrollPane.setViewportView(resultTable);
 		
-		lblNumOfTables = new JLabel("Select Number of Tables");
-		lblNumOfTables.setBounds(10, 112, 227, 14);
-		add(lblNumOfTables);
+		queryVariantListModel = new DefaultComboBoxModel<String>(queryVariants);
+		queryComboBox = new JComboBox<String>();
+		queryComboBox.setBounds(10, 56, 250, 20);
+		queryComboBox.setModel(queryVariantListModel);
+		add(queryComboBox);
 		
-		numberOfTables = new JComboBox<String>();
-		numberOfTables.setBounds(10, 126, 227, 20);
-		numberOfTables.addItem("1 Table");
-		numberOfTables.addItem("2 Tables");
-		numberOfTables.addItem("3 Tables");
-		numberOfTables.addItem("4-6 Tables");
-		add(numberOfTables);
-		addNumberOfTablesListener();
-		 
-		queryVariantList = new DefaultComboBoxModel<String>(oneTableVariants);
-		lblSelectQueryVariant = new JLabel("Select Query Variant");
-		lblSelectQueryVariant.setBounds(10, 157, 227, 14);
-		add(lblSelectQueryVariant);
-		queryVariant = new JComboBox<String>();
-		queryVariant.setBounds(10, 182, 227, 20);
-		queryVariant.setModel(queryVariantList);
-		add(queryVariant);
+		queryListModel = new DefaultComboBoxModel<String>(firstQueryVersions);
+		queryBox = new JComboBox<String>();
+		queryBox.setBounds(270, 56, 250, 20);
+		queryBox.setModel(queryListModel);
+		addQueryListener();
+		add(queryBox);
 		
-		lblSelectQueryVersion = new JLabel("Select Query Version");
-		lblSelectQueryVersion.setBounds(10, 213, 227, 14);
-		add(lblSelectQueryVersion);
+		timeTableModel = new DefaultTableModel(new String[]{"Query Number", "Time", "Query"}, 0){
+			@Override
+			public boolean isCellEditable(int row, int column){
+				return false;
+			}
+		};
+		timeTableScrollPane = new JScrollPane();
+		timeTableScrollPane.setBounds(10, 396, 650, 243);
+		add(timeTableScrollPane);
+		timeTable = new JTable();
+		timeTableScrollPane.setViewportView(timeTable);
+		timeTable.setModel(timeTableModel);
 		
-		queryVersion = new JComboBox<String>();
-		queryVersion.setBounds(10, 236, 227, 20);
-		add(queryVersion);
+		queryScrollPane = new JScrollPane();
+		queryScrollPane.setBounds(670, 85, 265, 300);
+		add(queryScrollPane);
 		
-		txtSelectFrom = new JLabel();
-		txtSelectFrom.setVerticalAlignment(SwingConstants.TOP);
-		txtSelectFrom.setBounds(10, 267, 227, 119);
-		add(txtSelectFrom);
+		queryTextLabel = new JLabel();
+		queryScrollPane.setViewportView(queryTextLabel);
+		queryTextLabel.setText(queryBox.getSelectedItem().toString());
+		queryTextLabel.setVerticalAlignment(SwingConstants.TOP);
 		
-		backgroundImageLabel = new JLabel();
-		backgroundImageLabel.setBounds(0, 0, 650, 466);
-		backgroundImageLabel.setIcon(new ImageIcon(backgroundImage));
-		add(backgroundImageLabel);
+
 	}
 	
-	public void addNumberOfTablesListener(){
-	    numberOfTablesListener = new ItemListener() {
-		      public void itemStateChanged(ItemEvent itemEvent) {
-		    	  changeVariantContent(itemEvent.getItem().toString());
-		      }
-		    };
-		    
-		numberOfTables.addItemListener(numberOfTablesListener);
-	}
-	
-	public void changeVariantContent(String numOfTables){
-		if(numOfTables.contains("1")){
-			queryVariantList.removeAllElements();
-			for(String i: oneTableVariants)
-				queryVariantList.addElement(i);
-		}
-		else if(numOfTables.contains("2")){
-			queryVariantList.removeAllElements();
-			for(String i: twoTableVariants)
-				queryVariantList.addElement(i);
-		}
-			
-		else if (numOfTables.contains("3")){
-			queryVariantList.removeAllElements();
-			for(String i: threeTableVariants)
-				queryVariantList.addElement(i);
-		}
-		else{
-			queryVariantList.removeAllElements();
-			for(String i: fourTableVariants)
-				queryVariantList.addElement(i);
+	class queryAL implements ActionListener{
+		public void actionPerformed(ActionEvent e) {
+			createQuery(removeHTML(queryBox.getSelectedItem().toString()));
+			//showProfiles();
 		}
 	}
 	
-	public void addQueryAL(ActionListener e){
-		query.addActionListener(e);
+	public void addQueryListener(){
+		queryVariantListener = new ItemListener(){
+			public void itemStateChanged(ItemEvent itemEvent){
+				changeQueryList(queryComboBox.getSelectedIndex());
+			}
+		};
+		queryListener = new ItemListener(){
+			public void itemStateChanged(ItemEvent itemEvent){
+				setLabelContent(itemEvent.getItem().toString());
+			}
+		};
+		queryComboBox.addItemListener(queryVariantListener);
+		queryBox.addItemListener(queryListener);
+	}
+	
+	public void changeQueryList(int queryNumber){
+		queryListModel.removeAllElements();
+		switch(queryNumber){	
+		case 0:
+			for(String i: firstQueryVersions)
+				queryListModel.addElement(i);
+				break;
+		case 1:
+			for(String i: secondQueryVersions)
+				queryListModel.addElement(i); 
+			break;
+		case 2:
+			for(String i: thirdQueryVersions)
+				queryListModel.addElement(i);
+			break;
+		case 3:
+			for(String i: fourthQueryVersions)
+				queryListModel.addElement(i);
+			break;
+		case 4:
+			for(String i: fifthQueryVersions)
+				queryListModel.addElement(i);
+			break;
+		case 5:
+			for(String i: sixthQueryVersions)
+				queryListModel.addElement(i);
+			break;
+		case 6:
+			for(String i: seventhQueryVersions )
+				queryListModel.addElement(i);
+			break;
+		case 7:
+			for(String i: eighthQueryVersions)
+				queryListModel.addElement(i);
+			break;
+		}
+	}
+	
+	public void createQuery(String query){
+			System.out.println("I am here 3");
+			System.out.println(query);
+		try {
+			Statement statement = database.getConnection().createStatement();
+			ResultSet rs = statement.executeQuery(query);
+			ResultSetMetaData rsmd = rs.getMetaData();
+			int columnCount = rsmd.getColumnCount();
+			System.out.println("column count is " + columnCount);
+			System.out.println("I am here 2");
+			int rowCount = 0;
+			List<String> columnNames = new ArrayList<String>();
+			String[] columnNamesArray = new String[columnCount];
+			for(int i = 1; i <= columnCount; i++){
+				String name = rsmd.getColumnName(i);
+				columnNames.add(name);
+			}
+			columnNamesArray = columnNames.toArray(columnNamesArray);
+			Object[] objects = new Object[columnCount];
+			DefaultTableModel resultTableModel = new DefaultTableModel(columnNamesArray, 0){
+				@Override
+				public boolean isCellEditable(int row, int column){
+					return false;
+				}
+			};
+			while(rs.next()){
+				System.out.println(rs.getString("PublisherName"));
+				for(int i = 0; i < columnCount; i++){
+					objects[i] = rs.getObject(i + 1);
+				}
+				resultTableModel.addRow(objects);
+			}
+			resultTable.setModel(resultTableModel);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void showProfiles(){
+		System.out.println("I am here in show profiles");
+		boolean isNotEmpty = false;
+		try{
+			Statement statement = database.getConnection().createStatement();
+			ResultSet rs = statement.executeQuery("SHOW PROFILES");
+			ResultSetMetaData rsmd = rs.getMetaData();
+			int columnCount = rsmd.getColumnCount();
+			int rowCount = 0;
+			while(rs.next()){
+				rowCount += rs.getRow();
+				isNotEmpty = true;
+			}
+			System.out.println("rs.next() is " + isNotEmpty);
+			System.out.println("Row count for profiles is : " + rowCount);
+			System.out.println("Colum count for show profiles is: " + columnCount);
+			timeTableModel = buildTableModel(rs);
+		}catch(SQLException e){
+			e.printStackTrace();
+		}
+		
+	}
+	public DefaultTableModel buildTableModel(ResultSet rs)
+	        throws SQLException {
+
+	    ResultSetMetaData metaData = rs.getMetaData();
+
+	    // names of columns
+	    Vector<String> columnNames = new Vector<String>();
+	    int columnCount = metaData.getColumnCount();
+	    for (int column = 1; column <= columnCount; column++) {
+	        columnNames.add(metaData.getColumnName(column));
+	    }
+
+	    // data of the table
+	    Vector<Vector<Object>> data = new Vector<Vector<Object>>();
+	    while (rs.next()) {
+	        Vector<Object> vector = new Vector<Object>();
+	        for (int columnIndex = 1; columnIndex <= columnCount; columnIndex++) {
+	            vector.add(rs.getObject(columnIndex));
+	        }
+	        data.add(vector);
+	    }
+
+	    return new DefaultTableModel(data, columnNames);
+
+	}
+	public void setLabelContent(String query){
+		queryTextLabel.setText(query);
+	}
+	
+	public String removeHTML(String query){
+		query = query.replaceAll("<html>", "");
+		query = query.replaceAll("\n", "");
+		query = query.replaceAll("<br>", "");
+		query = query.replaceAll("</html>", "");
+		return query;
 	}
 }

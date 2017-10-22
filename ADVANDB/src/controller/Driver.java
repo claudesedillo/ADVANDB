@@ -1,9 +1,10 @@
 package controller;
 
+import view.View;
+
 public class Driver {
 
 	public static void main(String[] args){
-		Controller controller = new Controller();
-		controller.start();
+		View view = new View();
 	}
 }
