@@ -1,13 +1,15 @@
 package view;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
@@ -24,15 +26,20 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.SwingConstants;
+import javax.swing.UIManager;
+import javax.swing.plaf.ColorUIResource;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
+import javax.swing.table.TableCellRenderer;
 
 import model.Database;
 
 public class MainProgram extends JPanel{
 
+	private Color darkerBlue = new Color(0x29B6F6), darkBlue = new Color(0x4FC3F7), lighterBlue = new Color(0xB3E5FC), backgroundColor = new Color(0x81D4FA), lightestBlue = new Color(0xE1F5FE);
 	private Database database;
 	private JTable resultTable, timeTable;
-	private DefaultTableModel timeTableModel;
+	private DefaultTableModel timeTableModel, currentQueryTableModel;
 	private JComboBox<String> queryComboBox, queryBox;
 	private ItemListener queryVariantListener, queryListener;
 	private JButton query;
@@ -62,7 +69,7 @@ public class MainProgram extends JPanel{
 										   "FROM book_loans <br> " +
 										   "GROUP BY BookID, BranchID) NT <br> " +
 										   "WHERE BranchID = NT.BranchID <br> " +
-										   "AND BookID = NT.BookID </html>",
+										   "AND BookID = NT.BookID; </html>",
 										   
 										   "<html> /*Indexing + Natural Join*/ <br> " +
 										   "CREATE index index1 on book(BookID); <br><br> " +
@@ -78,8 +85,8 @@ public class MainProgram extends JPanel{
 										    "CREATE INDEX index2 ON book_loans(branchID); <br> " +
 											"CREATE INDEX index1 ON book_loans(cardNo);  <br><br> " +
 											"SELECT CardNo, COUNT(*) AS '# of loans'  FROM book_loans <br> " +
-											"GROUP cardNo <br> " +
-											"HAVING count(*) > 50; <br>" +
+											"GROUP BY cardNo <br> " +
+											"HAVING count(*) > 50; <br><br>" +
 											"DROP INDEX index1 on book_loans; <br> " +
 											"DROP INDEX index2 on book_loans; <br> </html>",
 											
@@ -87,7 +94,7 @@ public class MainProgram extends JPanel{
 											"CREATE INDEX index1 ON book_loans(cardNo); <br><br> " +
 											"SELECT CardNo, COUNT(*) AS '# of loans'  FROM book_loans <br> " +
 											"GROUP BY cardNo <br> " +
-											"HAVING COUNT(*) > 50;<br>" + 
+											"HAVING COUNT(*) > 50;<br><br>" + 
 											"DROP INDEX index1 ON book_loans;</html>",
 											
 											"<html>/*Inner Join*/ <br> " +
@@ -97,7 +104,7 @@ public class MainProgram extends JPanel{
 											"HAVING count(*) > 50 <br> " +
 											") table2 <br> " +
 											"WHERE book_loans.cardNo = table2.cardNo <br> " +
-											"GROUP BY book_loans.CardNo </html>",
+											"GROUP BY book_loans.CardNo; </html>",
 											
 											"<html>/*2 Indexes + Inner Join*/ <br>" +
 											"CREATE INDEX index2 ON book_loans(branchID); <br> " +
@@ -108,7 +115,7 @@ public class MainProgram extends JPanel{
 											"HAVING COUNT(*) > 50  <br>" +
 											") table2  <br>" +
 											"WHERE book_loans.cardNo = table2.cardNo  <br>" +
-											"GROUP BY book_loans.CardNo; <br>" +
+											"GROUP BY book_loans.CardNo; <br><br>" +
 											"DROP INDEX index1 on book_loans; <br> " +
 											"DROP INDEX index2 on book_loans; <br> </html>"};
 	
@@ -116,22 +123,22 @@ public class MainProgram extends JPanel{
 										   "SELECT BranchID, BranchName, COUNT(*) as NoOfBooksLoaned <br>" +
 										   "FROM book_loans NATURAL JOIN library_branch <br>" +
 										   "WHERE DateOut BETWEEN '8/15/2010' AND '8/25/2017' <br>" + 
-										   "GROUP BY BranchID </html>",
+										   "GROUP BY BranchID; </html>",
 
 										   "<html>/*Inner Join*/ <br>" +
 										   "SELECT BL.BranchID, BranchName, COUNT(*) as NoOfBooksLoaned <br>" +
 										   "FROM book_loans BL INNER JOIN library_branch LB <br>" +
 										   "ON LB.BranchID = BL.BranchID <br>" +
 										   "WHERE DateOut BETWEEN '8/15/2010' AND '8/25/2017' <br>" +
-										   "GROUP BY BL.BranchID </html>",
+										   "GROUP BY BL.BranchID; </html>",
 										   
 										   "<html> /*Indexing + Inner Join*/ <br> " +
-										   "CREATE index index1 ON book_loans(BranchID) <br><br>" +
+										   "CREATE index index1 ON book_loans(BranchID); <br><br>" +
 										   "SELECT BL.BranchID, BranchName, COUNT(*) as NoOfBooksLoaned <br>" +
 										   "FROM book_loans BL INNER JOIN library_branch LB <br>" +
 										   "ON LB.BranchID = BL.BranchID <br>" +
 										   "WHERE DateOut BETWEEN '8/15/2010' AND '8/25/2017' <br>" +
-										   "GROUP BY BL.BranchID; <br> " +
+										   "GROUP BY BL.BranchID; <br><br> " +
 										   "DROP INDEX index1 ON book_loans; </html>",
 										   
 										   "<html> /*Subquery*/ <br>" +
@@ -140,7 +147,7 @@ public class MainProgram extends JPanel{
 										   "SELECT BranchID, COUNT(*) as NoOfBooksLoaned <br>" +
 										   "FROM book_loans BL WHERE DateOut BETWEEN '8/15/2010' AND '8/25/2017' <br>" +
 										   "GROUP BY BL.BranchID) NT <br>" +
-										   "WHERE LB.BranchID = NT.BranchID </html>"};
+										   "WHERE LB.BranchID = NT.BranchID; </html>"};
 	
 	private String[] fourthQueryVersions = {"<html> /*2 Indexes*/ <br>" +
 											"Create index cardIndex on borrower(cardNo, borrowerfname, borrowerlname); <br>" +
@@ -153,13 +160,12 @@ public class MainProgram extends JPanel{
 											"DROP INDEX card2Index on book_loans;<br></html>", 
 											
 											"<html> /*1 Index*/ <br>" +
-											"Create index on cardIndex borrower(cardNo, borrowerfname, borrowerlname) <br>" +
+											"Create index cardIndex on borrower(cardNo, borrowerfname, borrowerlname); <br><br>" +
 											"select concat(BorrowerLName, \", \", BorrowerFName) as 'BurrowerName', count(*) as 'Books loaned' from book_loans, borrower <br>" +
 											"where borrower.cardNo = book_loans.cardNo <br>" +
 											"group by borrower.cardNo <br>" +
 											"having count(*) <= 2; <br> <br>" + 
-											"DROP INDEX cardIndex on borrower; <br>" +
-											"DROP INDEX card2Index on book_loans;<br></html>",
+											"DROP INDEX cardIndex on borrower; </html>",
 											
 											"<html> /*Inner Join*/ <br><br>" +
 											"SELECT concat(borrowerfname, borrowerlname) as 'BorrowerName', NoBooksBor <br>" +
@@ -168,7 +174,7 @@ public class MainProgram extends JPanel{
 											"GROUP BY CardNo <br>" +
 											"HAVING COUNT(*) <= 2) mostTwo <br>" +
 											"WHERE BO.CardNo = mostTwo.CardNo <br>" +
-											"ORDER BY NoBooksBor DESC, BorrowerName ASC </html>",
+											"ORDER BY NoBooksBor DESC, BorrowerName ASC; </html>",
 											
 											"<html> /*Inner Join + 2 Indexes*/ <br><br>" +
 											"Create index cardIndex on borrower(cardNo, borrowerfname, borrowerlname); <br>" +
@@ -180,8 +186,8 @@ public class MainProgram extends JPanel{
 											"HAVING COUNT(*) <= 2) mostTwo <br>" +
 											"WHERE BO.CardNo = mostTwo.CardNo <br>" +
 											"ORDER BY NoBooksBor DESC, BorrowerName ASC; <br><br>" +
-											"DROP INDEX index1 on book_loans; <br> " +
-											"DROP INDEX index2 on book_loans; <br> </html>"
+											"DROP INDEX cardIndex on borrower; <br> " +
+											"DROP INDEX card2Index on book_loans; <br> </html>"
 											};
 	
 	private String[] fifthQueryVersions = {"<html> /*Cartesian Product*/ <br>" +
@@ -189,14 +195,14 @@ public class MainProgram extends JPanel{
 										   "FROM book_loans BL, borrower BR, book B <br>" +
 										   "WHERE DueDate = DateReturned  <br>" +
 										   "AND BL.BookID = B.BookID  <br>" +
-										   "AND BL.CardNo = BR.CardNo ORDER BY 3 </html>",
+										   "AND BL.CardNo = BR.CardNo ORDER BY 3; </html>",
 										   
 										   "<html> /*Natural Join*/ <br>" +
 										   "SELECT CardNo, BookID, Title, DueDate, DateReturned <br>" +
 										   "FROM book_loans NATURAL JOIN borrower <br>" +
 										   "NATURAL JOIN book <br>" +
 										   "WHERE DueDate = DateReturned <br>" +
-										   "ORDER BY 3 <br>" +
+										   "ORDER BY 3; <br>" +
 										   "</html>", 
 										   
 										   "<html> /*Indexing + Natural Join*/<br>" + 
@@ -207,7 +213,7 @@ public class MainProgram extends JPanel{
 										   "NATURAL JOIN book <br>" +
 										   "WHERE DueDate = DateReturned <br>" +
 										   "ORDER BY 1; <br><br>" +
-										   "DROP index index1 on book_loans</html>",
+										   "DROP index index1 on book_loans;</html>",
 										   
 										   "<html> /*Indexing + Cartesian Product*/ <br>" +
 										   "CREATE index index1 on book_loans(BookID); <br><br>" +
@@ -216,11 +222,11 @@ public class MainProgram extends JPanel{
 										   "WHERE DueDate = DateReturned  <br>" +
 										   "AND BL.BookID = B.BookID  <br>" +
 										   "AND BL.CardNo = BR.CardNo ORDER BY 3; <br><br> " +
-										   "DROP index index1 on book_loans</html>"};
+										   "DROP index index1 on book_loans;</html>"};
 	
 	private String[] sixthQueryVersions = {"<html>/*2 Indexes*/ <br> " +
 										   "Create Index index1 ON Publisher(publisherName, address); <br> " +
-										   "create index index2 ON book_loan(publisherName) <br><br> " +
+										   "create index index2 ON book(publisherName); <br><br> " +
 										   "SELECT concat(book_authors.AuthorFirstName , book_authors.AuthorLastName) as Author, <br>" + 
 									       "count(*) as 'No. Of books' from publisher, book, book_authors <br> " +
 									       "WHERE book.PublisherName = publisher.PublisherName AND <br> " +
@@ -229,7 +235,7 @@ public class MainProgram extends JPanel{
 									       "GROUP BY Author <br>" +
 									       "ORDER BY 2 desc; <br><br>" +
 									       "DROP INDEX index1 on Publisher; <br>" +
-									       "DROP INDEX index2 on book_loan; <br></html>", 
+									       "DROP INDEX index2 on book; <br></html>", 
 									       
 									       "<html> /*1 Index*/ <br>" +
 									       "Create Index index1 ON Publisher(publisherName, address); <br><br> " +
@@ -239,7 +245,7 @@ public class MainProgram extends JPanel{
 									       "book_authors.BookID = book.BookID AND <br>" +
 									       "publisher.Address = \"tokyo\" <br>" +
 									       "GROUP BY Author <br>" +
-									       "ORDER BY 2 desc; <br>" +
+									       "ORDER BY 2 desc; <br><br>" +
 									       "DROP INDEX index1 on Publisher; <br>",
 									       
 									       "<html> /*Inner Join*/ <br>" +
@@ -248,19 +254,19 @@ public class MainProgram extends JPanel{
 									       "WHERE book.PublisherName = pubLoc.PublisherName AND <br> " +
 									       "book_authors.BookID = book.BookID <br> " +
 									       "GROUP BY Author <br>" +
-									       "ORDER BY 2 desc <br></html>",
+									       "ORDER BY 2 desc; <br></html>",
 
 										   "<html> /* Inner Join + Indexing*/ <br>" +
 										   "Create Index index1 ON Publisher(publisherName, address); <br> " +
-										   "create index index2 ON book_loan(publisherName); <br><br> " +
+										   "create index index2 ON book(publisherName); <br><br> " +
 										   "SELECT concat(book_authors.AuthorFirstName , book_authors.AuthorLastName) as Author, <br> " +
 									       "count(*) as 'No. Of books' from book, book_authors inner join (SELECT * from publisher where publisher.Address = \"tokyo\") pubLoc <br>" + 
 									       "WHERE book.PublisherName = pubLoc.PublisherName AND <br> " +
 									       "book_authors.BookID = book.BookID <br> " +
 									       "GROUP BY Author <br>" +
 									       "ORDER BY 2 desc; <br><br> " +
-									       "DROP INDEX index1 ON Publisher <br>" +
-									       "DROP INDEX index2 ON book_loan </html>"
+									       "DROP INDEX index1 ON Publisher; <br>" +
+									       "DROP INDEX index2 ON book; </html>"
 									       };
 	
 	private String[] seventhQueryVersions = {"<html> /*Subquery*/ <br> " + 
@@ -271,7 +277,7 @@ public class MainProgram extends JPanel{
 											 "SELECT PublisherName FROM publisher p WHERE PublisherName = 'HarperCollins')) NT <br> " +
 											 "WHERE NT.BookID = BL.BookID AND <br> " +
 											 "DateOut between '1/1/2010' and '1/1/2017') NT2 <br> " +
-											 "WHERE LB.BranchID = NT2.BranchID </html> ",
+											 "WHERE LB.BranchID = NT2.BranchID; </html> ",
 											 
 											 "<html> /*Natural Join*/ <br> " +
 											 "SELECT DISTINCT BranchName, LB.BranchID <br> " + 
@@ -281,7 +287,7 @@ public class MainProgram extends JPanel{
 											 "SELECT PublisherName FROM publisher p WHERE PublisherName = 'HarperCollins')) NT <br> " +
 											 "WHERE NT.BookID = BL.BookID AND <br> " +
 											 "DateOut between '1/1/2010' and '1/1/2017') NT2 <br> " +
-											 "WHERE LB.BranchID = NT2.BranchID </html> ",
+											 "WHERE LB.BranchID = NT2.BranchID; </html> ",
 											 
 											 "<html> /*Indexing + Natural Join*/ <br> " +
 											 "CREATE index index1 on library_branch(BranchID); <br><br>"  +
@@ -292,9 +298,10 @@ public class MainProgram extends JPanel{
 											 "SELECT PublisherName FROM publisher p WHERE PublisherName = 'HarperCollins')) NT <br> " +
 											 "WHERE NT.BookID = BL.BookID AND <br> " +
 											 "DateOut between '1/1/2010' and '1/1/2017') NT2 <br> " +
-											 "WHERE LB.BranchID = NT2.BranchID; </html> ",
+											 "WHERE LB.BranchID = NT2.BranchID; <br><br>" + 
+											 "DROP INDEX index1 on library_branch;</html> ",
 											 
-											 "<html> /*Indexing + Subquery */" +
+											 "<html> /*Indexing + Subquery */<br>" +
 											 "CREATE index index1 on library_branch(BranchID); <br><br>"  +
 											 "SELECT DISTINCT BranchName, LB.BranchID <br> " +
 											 "FROM library_branch LB, ( <br> " +
@@ -303,10 +310,11 @@ public class MainProgram extends JPanel{
 											 "SELECT PublisherName FROM publisher p WHERE PublisherName = 'HarperCollins')) NT <br> " +
 											 "WHERE NT.BookID = BL.BookID AND <br> " +
 											 "DateOut between '1/1/2010' and '1/1/2017') NT2 <br> " +
-											 "WHERE LB.BranchID = NT2.BranchID </html> "};
+											 "WHERE LB.BranchID = NT2.BranchID;<br><br>" + 
+											 "DROP INDEX index1 on library_branch;</html> "};
 	
 	private String[] eighthQueryVersions = {"<html> /*2 Indexes*/ <br>" +
-											"create index index1 on books(publisherName); <br> " +
+											"create index index1 on book(publisherName); <br> " +
 											"create index index2 on book_loans(BookID); <br><br> "	+
 											"SELECT PublisherName, BranchName, publisher.Address, count(*) as '# of books published and placed on branch with same address' FROM book  <br> " +
                                             "natural join book_loans  <br> " +
@@ -315,10 +323,12 @@ public class MainProgram extends JPanel{
                                             "WHERE publisher.Address = BranchAddress AND <br> " +
                                             "publisher.Address = \"New York\" <br> " +
                                             "GROUP BY PublisherName, BranchID <br> " +
-                                            "ORDER BY 4 DESC </html>",
+                                            "ORDER BY 4 DESC;<br>" +
+                                            "DROP INDEX index1 on book;<br> " +
+                                            "DROP INDEX index2 on book_loans;</html>",
                                             
                                             "<html> /*1 Index*/ <br>" +
-                                           	"create index index1 on books(publisherName); <br><br> " +		
+                                           	"create index index1 on book(publisherName); <br><br> " +		
         									"SELECT PublisherName, BranchName, publisher.Address, count(*) as '# of books published and placed on branch with same address' FROM book  <br> " +
                                             "natural join book_loans  <br> " +
                                             "natural join library_branch <br> " +
@@ -326,7 +336,8 @@ public class MainProgram extends JPanel{
                                             "WHERE publisher.Address = BranchAddress AND <br> " +
                                             "publisher.Address = \"New York\" <br> " +
                                             "GROUP BY PublisherName, BranchID <br> " +
-                                            "ORDER BY 4 DESC </html>",
+                                            "ORDER BY 4 DESC; <br><br>" + 
+                                            "DROP INDEX index1 on book</html>",
                                             
                                             "<html> /*Subquery*/ <br> " +
                                             "SELECT PublisherName, BranchName, Address, count(*) as '# of books published and placed on branch with same address' FROM book natural join book_loans <br> " +
@@ -334,23 +345,28 @@ public class MainProgram extends JPanel{
                                             "WHERE publisher.Address = branchAddress AND <br> " +
                                             "publisher.Address = \"New York\") table1 <br> " +
 			                                "GROUP BY PublisherName, BranchID <br> " +
-			                                "ORDER BY 4 DESC </html> ",
+			                                "ORDER BY 4 DESC; </html> ",
 
 			                                "<html> /*Indexing + Subquery*/ <br> " +
-			                               	"create index index1 on books(publisherName); <br> " +
+			                               	"create index index1 on book(publisherName); <br> " +
 											"create index index2 on book_loans(BookID); <br><br> "	+
 		                                    "SELECT PublisherName, BranchName, Address, count(*) as '# of books published and placed on branch with same address' FROM book natural join book_loans <br> " +
 		                                    "natural join (select * from library_branch, publisher <br> " +
 		                                    "WHERE publisher.Address = branchAddress AND <br> " +
 		                                    "publisher.Address = \"New York\") table1 <br> " +
 					                        "GROUP BY PublisherName, BranchID <br> " +
-					                        "ORDER BY 4 DESC </html> "};
+					                        "ORDER BY 4 DESC; <br><br>" + 
+					                        "DROP index index1 on book; <br>" + 
+					                        "DROP index index2 on book_loans;</html> "};
 	private JScrollPane timeTableScrollPane, resultTableScrollPane;
 	private JScrollPane queryScrollPane;
 	private JLabel queryTextLabel;
 	private JLabel lblSelectQuery;
 	private JLabel lblSelectQueryVersion;
 	private JLabel queryObjective;
+	private JTable currentQueryTimeTable;
+	private JButton btnClearCurrent;
+	private JButton btnClearResults;
 	
 	public MainProgram(){
 		init();
@@ -358,51 +374,90 @@ public class MainProgram extends JPanel{
 	
 	public void init(){
 		database = new Database();
-		setBackground(Color.WHITE);
+		setProfiling();
+		setBackground(backgroundColor);
 		setLayout(null);
 		setSize(new Dimension(950, 650));
 		query = new JButton("Query");
 		query.addActionListener(new queryAL());
-		query.setBounds(530, 34, 110, 20);
+		query.setBounds(830, 36, 110, 20);
 		query.setCursor(new Cursor(Cursor.HAND_CURSOR));
+		query.setBackground(darkerBlue);
+		query.addMouseListener(new MouseAdapter() {
+			public void mouseEntered(MouseEvent arg0) {
+				query.setBackground(darkBlue);
+			}
+			public void mouseExited(MouseEvent arg0){
+				query.setBackground(darkerBlue);
+			}
+		});
 		add(query);
 		
+		UIManager.put("ComboBox.background", lighterBlue);
 		resultTableScrollPane = new JScrollPane();
-		resultTableScrollPane.setBounds(10, 84, 650, 268);
+		resultTableScrollPane.setBounds(10, 84, 550, 268);
 		add(resultTableScrollPane);
-		resultTable = new JTable();
+		resultTable = new JTable(){
+			@Override
+			public Component prepareRenderer(TableCellRenderer renderer, int row, int column){
+				Component comp = super.prepareRenderer(renderer, row, column);
+				comp.setBackground(row % 2 == 0 ? lighterBlue : lightestBlue);
+				return comp;
+			}
+		};
 		resultTableScrollPane.setViewportView(resultTable);
-		
+		resultTableScrollPane.getViewport().setBackground(lighterBlue);
+		resultTable.getTableHeader().setResizingAllowed(false);
+		resultTable.getTableHeader().setReorderingAllowed(false);
+	    JTableHeader resultTableHeader = resultTable.getTableHeader();
+	    resultTableHeader.setBackground(darkBlue);
+	    
 		BoundsPopupMenuListener listener = new BoundsPopupMenuListener(true, false);
 		queryVariantListModel = new DefaultComboBoxModel<String>(queryVariants);
 		queryComboBox = new JComboBox<String>();
-		queryComboBox.setBounds(10, 36, 250, 20);
-		queryComboBox.addPopupMenuListener(listener);
+		queryComboBox.setBounds(10, 36, 400, 20);
 		queryComboBox.setModel(queryVariantListModel);
 		add(queryComboBox);
 		
 		queryListModel = new DefaultComboBoxModel<String>(firstQueryVersions);
 		queryBox = new JComboBox<String>();
-		queryBox.setBounds(270, 36, 250, 20);
+		queryBox.setBounds(420, 36, 400, 20);
 		queryBox.setModel(queryListModel);
 		addQueryListener();
 		add(queryBox);
 		
-		timeTableModel = new DefaultTableModel(new String[]{"Query Number", "Time", "Query"}, 0){
+		timeTableModel = new DefaultTableModel(new String[]{"ID", "Time", "Query"}, 0){
 			@Override
 			public boolean isCellEditable(int row, int column){
 				return false;
 			}
 		};
 		timeTableScrollPane = new JScrollPane();
-		timeTableScrollPane.setBounds(683, 84, 255, 268);
+		timeTableScrollPane.setBounds(570, 84, 370, 341);
 		add(timeTableScrollPane);
-		timeTable = new JTable();
+		timeTable = new JTable(){
+			@Override
+			public Component prepareRenderer(TableCellRenderer renderer, int row, int column){
+				Component comp = super.prepareRenderer(renderer, row, column);
+				comp.setBackground(row % 2 == 0 ? lighterBlue : lightestBlue);
+				return comp;
+			}
+		};
+		timeTable.setBackground(Color.WHITE);
 		timeTableScrollPane.setViewportView(timeTable);
+		timeTableScrollPane.getViewport().setBackground(lighterBlue);
 		timeTable.setModel(timeTableModel);
+		timeTable.getColumnModel().getColumn(0).setPreferredWidth(30);
+		timeTable.getColumnModel().getColumn(1).setPreferredWidth(79);
+		timeTable.getColumnModel().getColumn(2).setPreferredWidth(258);
+		timeTable.getTableHeader().setResizingAllowed(false);
+		timeTable.getTableHeader().setReorderingAllowed(false);
+	    JTableHeader timeTableHeader = timeTable.getTableHeader();
+	    timeTableHeader.setBackground(darkBlue);
 		
 		queryScrollPane = new JScrollPane();
-		queryScrollPane.setBounds(10, 461, 650, 147);
+		queryScrollPane.getViewport().setBackground(lighterBlue);
+		queryScrollPane.setBounds(10, 461, 550, 147);
 		add(queryScrollPane);
 		
 		queryTextLabel = new JLabel();
@@ -415,7 +470,8 @@ public class MainProgram extends JPanel{
 		add(lblQuery);
 		
 		JScrollPane objectiveScrollPane = new JScrollPane();
-		objectiveScrollPane.setBounds(10, 381, 650, 44);
+		objectiveScrollPane.getViewport().setBackground(lighterBlue);
+		objectiveScrollPane.setBounds(10, 381, 550, 44);
 		add(objectiveScrollPane);
 		
 		queryObjective = new JLabel("New label");
@@ -426,8 +482,8 @@ public class MainProgram extends JPanel{
 		lblQueryObjective.setBounds(10, 363, 140, 14);
 		add(lblQueryObjective);
 		
-		JLabel lblQueryTimeTable = new JLabel("Query Time Table");
-		lblQueryTimeTable.setBounds(683, 67, 84, 14);
+		JLabel lblQueryTimeTable = new JLabel("Query History");
+		lblQueryTimeTable.setBounds(570, 65, 140, 14);
 		add(lblQueryTimeTable);
 		
 		lblSelectQuery = new JLabel("Select Query");
@@ -435,19 +491,140 @@ public class MainProgram extends JPanel{
 		add(lblSelectQuery);
 		
 		lblSelectQueryVersion = new JLabel("Select Query Version");
-		lblSelectQueryVersion.setBounds(270, 11, 165, 14);
+		lblSelectQueryVersion.setBounds(420, 11, 165, 14);
 		add(lblSelectQueryVersion);
+		
+		JScrollPane currentQueryScrollPane = new JScrollPane();
+		currentQueryScrollPane.getViewport().setBackground(lighterBlue);
+		currentQueryScrollPane.setBounds(570, 461, 370, 147);
+		add(currentQueryScrollPane);
+		
+		currentQueryTimeTable = new JTable(){
+			@Override
+			public Component prepareRenderer(TableCellRenderer renderer, int row, int column){
+				Component comp = super.prepareRenderer(renderer, row, column);
+				comp.setBackground(row % 2 == 0 ? lighterBlue : lightestBlue);
+				return comp;
+			}
+		};
+		currentQueryTimeTable.setBackground(Color.WHITE);
+		JTableHeader currentQueryHeader = currentQueryTimeTable.getTableHeader();
+		currentQueryHeader.setBackground(darkBlue);
+		currentQueryScrollPane.setViewportView(currentQueryTimeTable);
+		
+		currentQueryTableModel = new DefaultTableModel(new String[]{"ID", "Time", "Query"}, 0){
+			@Override
+			public boolean isCellEditable(int row, int column){
+				return false;
+			}
+		};
+		currentQueryTimeTable.setModel(currentQueryTableModel);
+		currentQueryTimeTable.getColumnModel().getColumn(0).setPreferredWidth(30);
+		currentQueryTimeTable.getColumnModel().getColumn(1).setPreferredWidth(79);
+		currentQueryTimeTable.getColumnModel().getColumn(2).setPreferredWidth(258);
+		currentQueryTimeTable.getTableHeader().setResizingAllowed(false);
+		currentQueryTimeTable.getTableHeader().setReorderingAllowed(false);
+		JLabel lblCurrentQuery = new JLabel("Current Query");
+		lblCurrentQuery.setBounds(570, 436, 165, 14);
+		add(lblCurrentQuery);
+		
+		JButton btnClear = new JButton("Clear History");
+		btnClear.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				timeTableModel.setRowCount(0);
+			}
+		});
+		btnClear.setBounds(830, 62, 110, 20);
+		btnClear.setCursor(new Cursor(Cursor.HAND_CURSOR));
+		btnClear.setBackground(darkerBlue);
+		btnClear.addMouseListener(new MouseAdapter() {
+			public void mouseEntered(MouseEvent arg0) {
+				btnClear.setBackground(darkBlue);
+			}
+			public void mouseExited(MouseEvent arg0){
+				btnClear.setBackground(darkerBlue);
+			}
+		});
+		add(btnClear);
+		
+		btnClearCurrent = new JButton("Clear Current");
+		btnClearCurrent.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				currentQueryTableModel.setRowCount(0);
+			}
+		});
+		btnClearCurrent.setCursor(new Cursor(Cursor.HAND_CURSOR));
+		btnClearCurrent.setBackground(darkerBlue);
+		btnClearCurrent.addMouseListener(new MouseAdapter() {
+			public void mouseEntered(MouseEvent arg0) {
+				btnClearCurrent.setBackground(darkBlue);
+			}
+			public void mouseExited(MouseEvent arg0){
+				btnClearCurrent.setBackground(darkerBlue);
+			}
+		});
+		btnClearCurrent.setBounds(830, 433, 110, 20);
+		add(btnClearCurrent);
+		
+		btnClearResults = new JButton("Clear Results");
+		btnClearResults.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				DefaultTableModel model =  (DefaultTableModel) resultTable.getModel();
+				model.setRowCount(0);
+			}
+		});
+		btnClearResults.setBounds(450, 62, 110, 20);
+		btnClearResults.setCursor(new Cursor(Cursor.HAND_CURSOR));
+		btnClearResults.setBackground(darkerBlue);
+		btnClearResults.addMouseListener(new MouseAdapter() {
+			public void mouseEntered(MouseEvent arg0) {
+				btnClearResults.setBackground(darkBlue);
+			}
+			public void mouseExited(MouseEvent arg0){
+				btnClearResults.setBackground(darkerBlue);
+			}
+		});
+		add(btnClearResults);
+		
+		JLabel lblQueryResults = new JLabel("Query Results");
+		lblQueryResults.setBounds(10, 65, 140, 14);
+		add(lblQueryResults);
 		
 
 	}
 	
 	class queryAL implements ActionListener{
 		public void actionPerformed(ActionEvent e) {
-			createQuery(removeHTML(queryBox.getSelectedItem().toString()));
-			showProfiles();
+			String query = removeHTML(queryBox.getSelectedItem().toString());
+			String[] queries = query.split(";");
+			System.out.println("Content of queries is ");
+			for(String s: queries){
+				System.out.println("S is " + s);
+			}
+			for(String s: queries){
+				if(s.toUpperCase().contains("CREATE") || s.toUpperCase().contains("DROP")){
+					createOrDropIndex(s);
+					showProfiles();
+				}
+				else if(s.toUpperCase().contains("SELECT")){
+					createQuery(s);
+					showProfiles();
+				}
+				System.out.println("Current s" + s);
+			}
+			showCurrentQueryProfiles(queries.length - 1);
 		}
 	}
 	
+	public void createOrDropIndex(String query){
+		try {
+			Statement statement;
+			statement = database.getConnection().createStatement();
+			statement.executeUpdate(query);
+		}catch(SQLException e){
+			e.printStackTrace();
+		}
+	}
 	public void addQueryListener(){
 		queryVariantListener = new ItemListener(){
 			public void itemStateChanged(ItemEvent itemEvent){
@@ -542,33 +719,54 @@ public class MainProgram extends JPanel{
 		}
 	}
 	
-	public void showProfiles(){
-		System.out.println("I am here in show profiles");
-		boolean isNotEmpty = false;
+	public void setProfiling(){
 		try{
-			System.out.println("PUTANGINA");
 			Statement statement = database.getConnection().createStatement();
 			statement.executeUpdate("SET profiling = 1");
-			System.out.println("PUTANGINA 2");
 		}catch(SQLException e){
 			e.printStackTrace();
 		}
+	}
+	
+	public void showCurrentQueryProfiles(int size){
 		try{
-			System.out.println("PUTANGINA 3");
+			System.out.println("Size passed to showCurrentQueryProfiles is " + size);
+			currentQueryTableModel.setRowCount(0);
 			Statement statement = database.getConnection().createStatement();
 			ResultSet rs = statement.executeQuery("SHOW PROFILES");
-			System.out.println("PUTANGINA 4");
-				ResultSetMetaData rsmd = rs.getMetaData();
-				int columnCount = rsmd.getColumnCount();
-				int rowCount = 0;
-				while(rs.next()){
-					rowCount += rs.getRow();
-					isNotEmpty = true;
+			rs.last();
+			int rsSize = rs.getRow();
+			rs.beforeFirst();
+			System.out.println("RS Size is " + rsSize);
+			if(rsSize > size){
+				for(int i = 0; i < rsSize - size; i++){
+					rs.next();
+					System.out.println("rs.next " + i + 1);
 				}
-				System.out.println("rs.next() is " + isNotEmpty);
-				System.out.println("Row count for profiles is : " + rowCount);
-				System.out.println("Colum count for show profiles is: " + columnCount);
-				timeTableModel = buildTableModel(rs);
+			}
+			while(rs.next()){
+				String queryid = rs.getString("Query_ID");
+				String duration = rs.getString("Duration");
+				String query = rs.getString("Query");
+				currentQueryTableModel.addRow(new Object[]{queryid, duration, query});
+			}
+		}catch(SQLException e){
+			e.printStackTrace();
+		}
+	}
+	public void showProfiles(){
+		System.out.println("I am here in show profiles");
+		try{
+			Statement statement = database.getConnection().createStatement();
+			ResultSet rs = statement.executeQuery("SHOW PROFILES");
+			rs.last();
+			if(rs.last()){
+				String queryid = rs.getString("Query_ID");
+				String duration = rs.getString("Duration");
+				String query = rs.getString("Query");
+				timeTableModel.addRow(new Object[]{queryid, duration, query});
+				System.out.println("I am here adding tables to timeTableModel");
+			}
 			}catch(SQLException e){
 				e.printStackTrace();
 			}

@@ -11,6 +11,7 @@ public class View extends JFrame{
 	private MainProgram mainProgram = new MainProgram();
 	
 	public View() {
+		super("ADVANDB MCO1");
 		initialize();
 	}
 
